@@ -1,0 +1,41 @@
+import type { SightWord } from '../types'
+
+export const SIGHT_WORDS: SightWord[] = [
+  // Functional / safety words — highest priority
+  { word: 'STOP', emoji: '🛑', speech: 'STOP. This sign means STOP!', category: 'functional' },
+  { word: 'GO', emoji: '🟢', speech: 'GO. This means you can go!', category: 'functional' },
+  { word: 'EXIT', emoji: '🚪', speech: 'EXIT. The exit is the way out!', category: 'functional' },
+  { word: 'OPEN', emoji: '🔓', speech: 'OPEN. This place is open!', category: 'functional' },
+  { word: 'CLOSED', emoji: '🔒', speech: 'CLOSED. This place is closed!', category: 'functional' },
+  { word: 'MEN', emoji: '🚹', speech: 'MEN. This bathroom is for men.', category: 'functional' },
+  { word: 'WOMEN', emoji: '🚺', speech: 'WOMEN. This bathroom is for women.', category: 'functional' },
+  { word: 'HOT', emoji: '🔥', speech: 'HOT. Be careful, this is hot!', category: 'functional' },
+  { word: 'COLD', emoji: '❄️', speech: 'COLD. This is cold!', category: 'functional' },
+  { word: 'PUSH', emoji: '🚪', speech: 'PUSH. Push the door to open it!', category: 'functional' },
+  { word: 'PULL', emoji: '🚪', speech: 'PULL. Pull the door to open it!', category: 'functional' },
+  { word: 'DANGER', emoji: '⚠️', speech: 'DANGER. This means danger, be careful!', category: 'functional' },
+  { word: 'WALK', emoji: '🚶', speech: 'WALK. It is safe to walk!', category: 'functional' },
+  { word: 'IN', emoji: '➡️', speech: 'IN. Go in!', category: 'functional' },
+  { word: 'OUT', emoji: '⬅️', speech: 'OUT. Go out!', category: 'functional' },
+  { word: 'UP', emoji: '⬆️', speech: 'UP. Go up!', category: 'functional' },
+  { word: 'DOWN', emoji: '⬇️', speech: 'DOWN. Go down!', category: 'functional' },
+  { word: 'RESTROOM', emoji: '🚻', speech: 'RESTROOM. The restroom is the bathroom!', category: 'functional' },
+  // Sports words
+  { word: 'BALL', emoji: '⚽', speech: 'BALL. Kick the ball!', category: 'sports' },
+  { word: 'TEAM', emoji: '👥', speech: 'TEAM. A team plays together!', category: 'sports' },
+  { word: 'WIN', emoji: '🏆', speech: 'WIN. Our team wins!', category: 'sports' },
+  { word: 'PLAY', emoji: '🎮', speech: 'PLAY. Let\'s play!', category: 'sports' },
+  { word: 'SCORE', emoji: '🥅', speech: 'SCORE. We scored a point!', category: 'sports' },
+  { word: 'GAME', emoji: '🏅', speech: 'GAME. Let\'s play a game!', category: 'sports' },
+  { word: 'RUN', emoji: '🏃', speech: 'RUN. Run fast!', category: 'sports' },
+  { word: 'JUMP', emoji: '⬆️', speech: 'JUMP. Jump high!', category: 'sports' },
+  // Basic sight words
+  { word: 'YES', emoji: '✅', speech: 'YES!', category: 'basic' },
+  { word: 'NO', emoji: '❌', speech: 'NO!', category: 'basic' },
+  { word: 'HELP', emoji: '🆘', speech: 'HELP. Ask for help!', category: 'basic' },
+  { word: 'EAT', emoji: '🍽️', speech: 'EAT. Time to eat!', category: 'basic' },
+  { word: 'DRINK', emoji: '🥤', speech: 'DRINK. Have a drink!', category: 'basic' },
+  { word: 'GOOD', emoji: '👍', speech: 'GOOD. That is good!', category: 'basic' },
+  { word: 'BIG', emoji: '🐘', speech: 'BIG. That is very big!', category: 'basic' },
+  { word: 'LITTLE', emoji: '🐭', speech: 'LITTLE. That is very little!', category: 'basic' },
+]
