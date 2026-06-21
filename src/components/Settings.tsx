@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { OPENAI_VOICES } from '../hooks/useSpeech'
+import { AudioDownloader } from './AudioDownloader'
 import type { Settings } from '../types'
 
 interface Props {
@@ -107,6 +108,12 @@ export function SettingsScreen({ settings, update, speak, resetProgress }: Props
             />
           </button>
         </div>
+
+        {/* Offline audio downloader */}
+        <AudioDownloader
+          voice={settings.voiceName || 'nova'}
+          onComplete={() => speak('All audio has been downloaded! The app will work instantly from now on.')}
+        />
 
         {/* Reset */}
         <div className="mt-2">
