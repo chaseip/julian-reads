@@ -7,7 +7,8 @@
       "Bash(git commit -m 'Fix TTS delay: client-side cache + background pre-warming *)",
       "Bash(git push *)",
       "Bash(git commit -m 'Fix U card: replace Urchin 🦔 \\(hedgehog\\) with Uniform 🎽 *)",
-      "Bash(git commit -m 'Persistent IndexedDB audio cache + one-time downloader in Settings *)"
+      "Bash(git commit -m 'Persistent IndexedDB audio cache + one-time downloader in Settings *)",
+      "Bash(git commit -m 'Serve audio as static files from repo — no more API calls in prod *)"
     ]
   }
 }

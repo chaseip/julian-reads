@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
-import { OPENAI_VOICES } from '../hooks/useSpeech'
-import { AudioDownloader } from './AudioDownloader'
+import { VOICES } from '../hooks/useSpeech'
 import type { Settings } from '../types'
 
 interface Props {
@@ -24,45 +23,43 @@ export function SettingsScreen({ settings, update, speak, resetProgress }: Props
       </div>
 
       <div className="p-5 flex flex-col gap-6">
-        {/* Voice selection */}
+        {/* Voice */}
         <div>
           <label className="text-white text-xl font-bold block mb-3">🎙️ Voice</label>
-          <div className="flex flex-col gap-2">
-            {OPENAI_VOICES.map(v => (
+          <div className="flex gap-3">
+            {VOICES.map(v => (
               <button
                 key={v.name}
                 onClick={() => update({ voiceName: v.name })}
-                className={`flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-colors ${
+                className={`flex-1 flex flex-col items-center py-4 rounded-2xl font-bold transition-colors ${
                   settings.voiceName === v.name
                     ? 'bg-indigo-600 text-white ring-2 ring-white'
                     : 'bg-gray-800 text-gray-300 active:bg-gray-700'
                 }`}
               >
+                <span className="text-2xl mb-1">{v.name === 'nova' ? '👩' : '👨'}</span>
                 <span className="text-lg">{v.label}</span>
-                <span className={`text-sm ${settings.voiceName === v.name ? 'text-indigo-200' : 'text-gray-500'}`}>
+                <span className={`text-xs mt-0.5 ${settings.voiceName === v.name ? 'text-indigo-200' : 'text-gray-500'}`}>
                   {v.desc}
                 </span>
               </button>
             ))}
           </div>
           <button
-            onClick={() => speak(`Hi Julian! Great job today! Keep learning! You are doing amazing!`)}
+            onClick={() => speak('Hi Julian! Great job today! Keep learning! You are doing amazing!')}
             className="mt-3 bg-indigo-600 text-white rounded-xl px-5 py-3 font-bold w-full active:bg-indigo-500"
           >
             🔊 Test Voice
           </button>
         </div>
 
-        {/* Voice speed */}
+        {/* Speed */}
         <div>
           <label className="text-white text-xl font-bold block mb-3">
             🐢 Speed: {Math.round(settings.voiceRate * 100)}%
           </label>
           <input
-            type="range"
-            min="0.6"
-            max="1.2"
-            step="0.05"
+            type="range" min="0.6" max="1.2" step="0.05"
             value={settings.voiceRate}
             onChange={e => update({ voiceRate: parseFloat(e.target.value) })}
             className="w-full accent-indigo-500"
@@ -72,7 +69,7 @@ export function SettingsScreen({ settings, update, speak, resetProgress }: Props
           </div>
         </div>
 
-        {/* Match game difficulty */}
+        {/* Match difficulty */}
         <div>
           <label className="text-white text-xl font-bold block mb-3">🎮 Match Game — Number of Choices</label>
           <div className="flex gap-3">
@@ -90,7 +87,7 @@ export function SettingsScreen({ settings, update, speak, resetProgress }: Props
               </button>
             ))}
           </div>
-          <p className="text-gray-500 text-sm mt-2">Start with 2 (easiest). Move to 3 or 4 as he improves.</p>
+          <p className="text-gray-500 text-sm mt-2">Start with 2 (easiest). Increase as he improves.</p>
         </div>
 
         {/* Haptics */}
@@ -103,32 +100,22 @@ export function SettingsScreen({ settings, update, speak, resetProgress }: Props
             onClick={() => update({ enableHaptics: !settings.enableHaptics })}
             className={`w-14 h-8 rounded-full transition-colors relative ${settings.enableHaptics ? 'bg-indigo-600' : 'bg-gray-600'}`}
           >
-            <span
-              className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow transition-transform ${settings.enableHaptics ? 'translate-x-7' : 'translate-x-1'}`}
-            />
+            <span className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow transition-transform ${settings.enableHaptics ? 'translate-x-7' : 'translate-x-1'}`} />
           </button>
         </div>
-
-        {/* Offline audio downloader */}
-        <AudioDownloader
-          voice={settings.voiceName || 'nova'}
-          onComplete={() => speak('All audio has been downloaded! The app will work instantly from now on.')}
-        />
 
         {/* Reset */}
-        <div className="mt-2">
-          <button
-            onClick={() => {
-              if (confirm('Reset all progress? This cannot be undone.')) {
-                resetProgress()
-                speak('Progress has been reset.')
-              }
-            }}
-            className="w-full bg-red-900/50 border border-red-700 text-red-400 rounded-2xl py-4 font-bold active:bg-red-900"
-          >
-            🗑️ Reset All Progress
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            if (confirm('Reset all progress? This cannot be undone.')) {
+              resetProgress()
+              speak('Progress has been reset.')
+            }
+          }}
+          className="w-full bg-red-900/50 border border-red-700 text-red-400 rounded-2xl py-4 font-bold active:bg-red-900"
+        >
+          🗑️ Reset All Progress
+        </button>
       </div>
     </div>
   )

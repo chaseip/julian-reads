@@ -1,71 +1,36 @@
 import { useCallback, useRef } from 'react'
-import { dbGet, dbSet } from '../utils/audioDb'
 import type { Settings } from '../types'
 
-export const OPENAI_VOICES = [
-  { name: 'nova',    label: 'Nova',    desc: 'Warm female ⭐ recommended' },
-  { name: 'shimmer', label: 'Shimmer', desc: 'Gentle female' },
-  { name: 'alloy',   label: 'Alloy',   desc: 'Neutral' },
-  { name: 'fable',   label: 'Fable',   desc: 'Expressive female' },
-  { name: 'echo',    label: 'Echo',    desc: 'Male' },
-  { name: 'onyx',    label: 'Onyx',    desc: 'Deep male' },
+export const VOICES = [
+  { name: 'nova', label: 'Nova', desc: 'Warm female ⭐' },
+  { name: 'onyx', label: 'Onyx', desc: 'Deep male' },
 ] as const
 
-// In-memory cache: avoids repeat IndexedDB reads within a session
-const memCache  = new Map<string, string>()        // cacheKey → objectURL
-const inFlight  = new Map<string, Promise<string>>() // cacheKey → pending fetch
-
-export function cacheKey(text: string, voice: string) {
-  return `${voice}::${text}`
+// SHA-256 first 12 hex chars — must match scripts/generate_audio.py text_hash()
+async function textHash(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return Array.from(new Uint8Array(buf))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 12)
 }
 
-async function getAudioUrl(text: string, voice: string): Promise<string> {
-  const key = cacheKey(text, voice)
-
-  // 1. Memory cache (instant)
-  if (memCache.has(key)) return memCache.get(key)!
-
-  // 2. Deduplicate in-flight requests
-  if (inFlight.has(key)) return inFlight.get(key)!
-
-  const promise = (async () => {
-    // 3. IndexedDB (fast, persists across reloads)
-    const stored = await dbGet(key)
-    if (stored) {
-      const url = URL.createObjectURL(stored)
-      memCache.set(key, url)
-      inFlight.delete(key)
-      return url
-    }
-
-    // 4. API (slow — only when not yet cached)
-    const res = await fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, voice }),
-    })
-    if (!res.ok) throw new Error(`TTS ${res.status}`)
-    const blob = await res.blob()
-
-    // Persist to IndexedDB so next load is instant
-    await dbSet(key, blob)
-
-    const url = URL.createObjectURL(blob)
-    memCache.set(key, url)
-    inFlight.delete(key)
-    return url
-  })()
-
-  inFlight.set(key, promise)
-  return promise
+async function audioUrl(text: string, voice: string): Promise<string> {
+  const hash = await textHash(text)
+  return `/audio/${voice}_${hash}.mp3`
 }
 
-/** Pre-fetch a list of phrases into cache (fire-and-forget, 3 at a time) */
+// Preloaded Audio elements — avoids first-play delay for key phrases
+const preloaded = new Map<string, HTMLAudioElement>()
+
 export async function prewarm(texts: string[], voice: string) {
-  const CONCURRENCY = 3
-  for (let i = 0; i < texts.length; i += CONCURRENCY) {
-    const batch = texts.slice(i, i + CONCURRENCY)
-    await Promise.allSettled(batch.map(t => getAudioUrl(t, voice)))
+  for (const text of texts) {
+    const url = await audioUrl(text, voice)
+    if (!preloaded.has(url)) {
+      const a = new Audio(url)
+      a.preload = 'auto'
+      preloaded.set(url, a)
+    }
   }
 }
 
@@ -77,6 +42,7 @@ export function useSpeech(settings: Settings) {
     cancelRef.current = true
     if (audioRef.current) {
       audioRef.current.pause()
+      audioRef.current.currentTime = 0
       audioRef.current = null
     }
   }, [])
@@ -85,17 +51,20 @@ export function useSpeech(settings: Settings) {
     if (!text) return
     stop()
     cancelRef.current = false
+
     const voice = settings.voiceName || 'nova'
+    const url   = await audioUrl(text, voice)
+    if (cancelRef.current) return
+
+    const audio = preloaded.get(url) ?? new Audio(url)
+    audio.playbackRate = settings.voiceRate
+    audio.currentTime  = 0
+    audioRef.current   = audio
 
     try {
-      const url = await getAudioUrl(text, voice)
-      if (cancelRef.current) return
-      const audio = new Audio(url)
-      audio.playbackRate = settings.voiceRate
-      audioRef.current  = audio
       await audio.play()
     } catch (err) {
-      console.error('TTS error:', err)
+      console.error('Audio error:', err)
     }
   }, [settings.voiceName, settings.voiceRate, stop])
 
