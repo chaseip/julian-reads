@@ -166,7 +166,7 @@ export const ALPHABET: LetterData[] = [
     words: [
       { word: 'Umbrella', emoji: '☂️' },
       { word: 'Unicorn', emoji: '🦄' },
-      { word: 'Urchin', emoji: '🦔' },
+      { word: 'Uniform', emoji: '🎽' },
     ],
   },
   {
