@@ -1,25 +1,19 @@
 import { useEffect } from 'react'
+import { OPENAI_VOICES } from '../hooks/useSpeech'
 import type { Settings } from '../types'
 
 interface Props {
   settings: Settings
   update: (patch: Partial<Settings>) => void
   speak: (text: string) => void
-  voices: SpeechSynthesisVoice[]
   resetProgress: () => void
 }
 
-export function SettingsScreen({ settings, update, speak, voices, resetProgress }: Props) {
-  const enVoices = voices.filter(v => v.lang.startsWith('en'))
-
+export function SettingsScreen({ settings, update, speak, resetProgress }: Props) {
   useEffect(() => {
     speak('Settings. You can change the voice and difficulty here.')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  function testVoice() {
-    speak('Hi Julian! Great job today! Keep learning!')
-  }
 
   return (
     <div className="flex flex-col h-full bg-gray-900 overflow-y-auto">
@@ -32,29 +26,26 @@ export function SettingsScreen({ settings, update, speak, voices, resetProgress 
         {/* Voice selection */}
         <div>
           <label className="text-white text-xl font-bold block mb-3">🎙️ Voice</label>
-          <div className="flex flex-col gap-2 max-h-48 overflow-y-auto bg-gray-800 rounded-2xl p-3">
-            {enVoices.length === 0 && (
-              <p className="text-gray-400 text-sm">No voices found. Try reloading.</p>
-            )}
-            {enVoices.map(v => (
+          <div className="flex flex-col gap-2">
+            {OPENAI_VOICES.map(v => (
               <button
                 key={v.name}
                 onClick={() => update({ voiceName: v.name })}
-                className={`text-left px-4 py-3 rounded-xl font-semibold transition-colors ${
+                className={`flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-colors ${
                   settings.voiceName === v.name
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-gray-300 active:bg-gray-700'
+                    ? 'bg-indigo-600 text-white ring-2 ring-white'
+                    : 'bg-gray-800 text-gray-300 active:bg-gray-700'
                 }`}
               >
-                {v.name}
-                {/female|samantha|zira|victoria|karen|moira|tessa|fiona/i.test(v.name) && (
-                  <span className="ml-2 text-pink-400 text-xs">(female)</span>
-                )}
+                <span className="text-lg">{v.label}</span>
+                <span className={`text-sm ${settings.voiceName === v.name ? 'text-indigo-200' : 'text-gray-500'}`}>
+                  {v.desc}
+                </span>
               </button>
             ))}
           </div>
           <button
-            onClick={testVoice}
+            onClick={() => speak(`Hi Julian! Great job today! Keep learning! You are doing amazing!`)}
             className="mt-3 bg-indigo-600 text-white rounded-xl px-5 py-3 font-bold w-full active:bg-indigo-500"
           >
             🔊 Test Voice
@@ -68,7 +59,7 @@ export function SettingsScreen({ settings, update, speak, voices, resetProgress 
           </label>
           <input
             type="range"
-            min="0.5"
+            min="0.6"
             max="1.2"
             step="0.05"
             value={settings.voiceRate}
@@ -76,7 +67,7 @@ export function SettingsScreen({ settings, update, speak, voices, resetProgress 
             className="w-full accent-indigo-500"
           />
           <div className="flex justify-between text-gray-500 text-xs mt-1">
-            <span>Slow</span><span>Normal</span><span>Fast</span>
+            <span>Slower</span><span>Normal</span><span>Faster</span>
           </div>
         </div>
 
@@ -105,7 +96,7 @@ export function SettingsScreen({ settings, update, speak, voices, resetProgress 
         <div className="flex items-center justify-between bg-gray-800 rounded-2xl px-5 py-4">
           <div>
             <div className="text-white font-bold text-lg">📳 Vibrate on correct answer</div>
-            <div className="text-gray-400 text-sm">iPad/iPhone only</div>
+            <div className="text-gray-400 text-sm">iPad / iPhone only</div>
           </div>
           <button
             onClick={() => update({ enableHaptics: !settings.enableHaptics })}
@@ -118,7 +109,7 @@ export function SettingsScreen({ settings, update, speak, voices, resetProgress 
         </div>
 
         {/* Reset */}
-        <div className="mt-4">
+        <div className="mt-2">
           <button
             onClick={() => {
               if (confirm('Reset all progress? This cannot be undone.')) {

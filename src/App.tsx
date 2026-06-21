@@ -14,7 +14,7 @@ import type { Screen } from './types'
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home')
   const { settings, updateSettings } = useSettings()
-  const { speak, stop, voices } = useSpeech(settings)
+  const { speak, stop } = useSpeech(settings)
   const { recordLetter, resetProgress } = useProgress()
 
   function nav(s: Screen) {
@@ -42,7 +42,6 @@ export default function App() {
             settings={settings}
             update={updateSettings}
             speak={speak}
-            voices={voices}
             resetProgress={resetProgress}
           />
         )}
