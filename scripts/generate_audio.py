@@ -14,7 +14,10 @@ Keep ALPHABET and SIGHT_WORD_SPEECHES in sync with src/data/ files.
 
 import hashlib
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -151,15 +154,79 @@ def audio_filename(text: str, voice: str) -> str:
     return f"{voice}_{text_hash(text)}.mp3"
 
 
-def generate_audio(text: str, voice: str, api_key: str) -> bytes:
-    resp = requests.post(
-        "https://api.openai.com/v1/audio/speech",
-        headers={"Authorization": f"Bearer {api_key}"},
-        json={"model": "tts-1", "voice": voice, "input": text, "speed": SPEED},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    return resp.content
+def looks_like_audio_payload(data: bytes) -> bool:
+    if not data or len(data) < 512:
+        return False
+    if data.startswith(b"ID3"):
+        return True
+    return len(data) >= 2 and data[0] == 0xFF and (data[1] & 0xE0) == 0xE0
+
+
+def is_valid_audio_file(path: Path) -> bool:
+    if not path.exists():
+        return False
+    if path.stat().st_size < 1024:
+        return False
+
+    if not looks_like_audio_payload(path.read_bytes()[:1024]):
+        return False
+
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        return True
+
+    try:
+        proc = subprocess.run(
+            [ffprobe, "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(path)],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+        if proc.returncode != 0:
+            return False
+        duration = proc.stdout.strip()
+        return bool(duration) and float(duration) > 0.0
+    except Exception:
+        return False
+
+
+def generate_audio(text: str, voice: str, api_key: str, retries: int = 3) -> bytes:
+    last_error: Exception | None = None
+    for attempt in range(retries):
+        try:
+            with requests.post(
+                "https://api.openai.com/v1/audio/speech",
+                headers={"Authorization": f"Bearer {api_key}"},
+                json={"model": "tts-1", "voice": voice, "input": text, "speed": SPEED},
+                timeout=60,
+                stream=True,
+            ) as resp:
+                resp.raise_for_status()
+                chunks = []
+                for chunk in resp.iter_content(chunk_size=8192):
+                    if chunk:
+                        chunks.append(chunk)
+                payload = b"".join(chunks)
+
+            if not looks_like_audio_payload(payload):
+                raise ValueError("Audio response was empty or did not look like MP3 data")
+            return payload
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt < retries - 1:
+                time.sleep(0.5 * (attempt + 1))
+                continue
+            raise
+        except Exception as exc:
+            last_error = exc
+            if attempt < retries - 1:
+                time.sleep(0.5 * (attempt + 1))
+                continue
+            raise
+
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("Audio generation failed")
 
 
 # ---------------------------------------------------------------------------
@@ -187,14 +254,28 @@ def main():
             filename = audio_filename(text, voice)
             filepath = OUTPUT_DIR / filename
 
-            if filepath.exists():
+            if filepath.exists() and is_valid_audio_file(filepath):
                 skipped += 1
                 done += 1
                 continue
 
+            if filepath.exists():
+                print(f"  Rebuilding invalid/partial file: {filepath.name}")
+
             try:
                 audio = generate_audio(text, voice, api_key)
-                filepath.write_bytes(audio)
+                with tempfile.NamedTemporaryFile("wb", delete=False, dir=str(OUTPUT_DIR), suffix=".tmp") as tmp:
+                    tmp.write(audio)
+                    tmp_path = Path(tmp.name)
+
+                if not is_valid_audio_file(tmp_path):
+                    tmp_path.unlink(missing_ok=True)
+                    raise ValueError("Downloaded audio did not pass validation")
+
+                if filepath.exists():
+                    filepath.unlink()
+                tmp_path.replace(filepath)
+
                 done += 1
                 pct = int(done / total * 100)
                 print(f"  [{pct:3d}%] {text[:70]}")
