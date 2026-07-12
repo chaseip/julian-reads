@@ -6,10 +6,10 @@ import { LetterFocus } from './components/LetterFocus'
 import { TrialActivity } from './components/TrialActivity'
 import { ParentDashboard } from './components/ParentDashboard'
 import { SettingsScreen } from './components/Settings'
-import { useSpeech, prewarm } from './hooks/useSpeech'
+import { useSpeech, prewarm, warmUrls, unlockAudio, VOICES } from './hooks/useSpeech'
 import { useSettings } from './hooks/useSettings'
 import * as store from './store/store'
-import { ALPHABET } from './data/alphabet'
+import { getAllPhrases } from './utils/phrases'
 import type { Screen, Skill } from './types'
 
 const SKILL_TITLES: Record<string, { skill: Skill; title: string }> = {
@@ -24,25 +24,25 @@ export default function App() {
   const { settings, updateSettings } = useSettings()
   const { speak, speakAndWait, stop } = useSpeech(settings)
 
-  // Open a fresh session once per launch (drives the "across >=2 sessions" mastery rule)
-  // and clear the obsolete accuracy-counter key.
+  // Open a fresh session once per launch (drives the "across >=2 sessions" mastery rule),
+  // clear the obsolete accuracy-counter key, precompute every phrase URL (so taps can play
+  // synchronously — required for iOS), and unlock audio on the first user gesture.
   useEffect(() => {
     store.startNewSession()
     store.clearLegacy()
+    warmUrls(getAllPhrases(), VOICES.map(v => v.name))
+    const onGesture = () => unlockAudio()
+    window.addEventListener('pointerdown', onGesture, { once: true })
+    return () => window.removeEventListener('pointerdown', onGesture)
   }, [])
 
-  // Preload the most-used audio files while the user is on the home screen.
+  // Preload (fetch) a few of the most-used audio files.
   useEffect(() => {
     const voice = settings.voiceName || 'nova'
-    const firstPhrases = [
-      "Hi Julian! Let's learn today! Pick something to do!",
-      'You did it all by yourself!',
-      ...ALPHABET.slice(0, 6).flatMap(l => [
-        `Tap ${l.words[0].word}.`,
-        `What letter does ${l.words[0].word} start with?`,
-      ]),
-    ]
-    prewarm(firstPhrases, voice)
+    prewarm(
+      ["Hi Julian! Let's learn today! Pick something to do!", 'You did it all by yourself!'],
+      voice,
+    )
   }, [settings.voiceName])
 
   function nav(s: Screen) {
@@ -66,6 +66,7 @@ export default function App() {
             settings={settings}
             speak={speak}
             speakAndWait={speakAndWait}
+            stop={stop}
             onExit={() => nav('home')}
           />
         )}

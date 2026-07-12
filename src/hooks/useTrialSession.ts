@@ -12,6 +12,7 @@ interface UseTrialSessionArgs {
   settings: Settings
   speak: (text: string) => void
   speakAndWait: (text: string) => Promise<boolean>
+  stop: () => void
 }
 
 export interface CelebrateState {
@@ -19,7 +20,7 @@ export interface CelebrateState {
   level: 'independent' | 'prompted'
 }
 
-export function useTrialSession({ skill, settings, speak, speakAndWait }: UseTrialSessionArgs) {
+export function useTrialSession({ skill, settings, speak, speakAndWait, stop }: UseTrialSessionArgs) {
   const cfg = store.getConfig()
 
   const [trial, setTrial] = useState<TrialState | null>(null)
@@ -219,7 +220,12 @@ export function useTrialSession({ skill, settings, speak, speakAndWait }: UseTri
       ?? itemsForSkill(skill)[0]
     if (first) startTrial(first.id, phaseFor(first.id))
     else setSessionDone(true)
-    return clearTimers
+    // Cleanup stops in-flight audio too, so StrictMode's dev double-invoke (and real
+    // unmounts) can't leave a half-spoken prompt overlapping the next one.
+    return () => {
+      stop()
+      clearTimers()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [skill])
 
