@@ -59,7 +59,22 @@ export function useTrialSession({ skill, settings, speak, speakAndWait, stop }: 
   const advanceRef = useRef<(rePresent: boolean) => void>(() => {})
   const dispatchRef = useRef<(e: TrialEvent) => void>(() => {})
 
+  // Consume a queued trial transition exactly once. Advancing is always driven by an
+  // audio-completion (or the errorless gate) — never by a decorative animation timer — so
+  // we never tear down a trial while its prompt is still speaking and stomp the next
+  // prompt over it (the cause of the silent post-celebration prompts).
+  const runPendingAdvance = useCallback(() => {
+    if (!pending.current) return
+    const { rePresent } = pending.current
+    pending.current = null
+    setCelebrate(c => ({ ...c, show: false }))
+    advanceRef.current(rePresent)
+  }, [])
+
   const processEffects = useCallback((effects: Effect[]) => {
+    // A correct answer emits a `celebrate` alongside its praise `speak`. That praise is the
+    // audio "for the tap": we play it to completion and only then advance to the next word.
+    const celebrating = effects.some(e => e.type === 'celebrate')
     let celebrated = false
     for (const fx of effects) {
       switch (fx.type) {
@@ -69,6 +84,9 @@ export function useTrialSession({ skill, settings, speak, speakAndWait, stop }: 
             speakAndWait(fx.text).then(ok => {
               if (ok && trialRef.current?.runtime === 'PRESENT') dispatchRef.current({ type: 'AUDIO_ENDED' })
             })
+          } else if (celebrating) {
+            // Praise for a correct answer — advance only when it has finished playing.
+            speakAndWait(fx.text).then(runPendingAdvance)
           } else {
             speak(fx.text)
           }
@@ -131,13 +149,10 @@ export function useTrialSession({ skill, settings, speak, speakAndWait, stop }: 
       overrides.current[cur.itemId] = 'ZERO_DELAY'
     }
 
-    // Advance now unless a celebration is playing (its overlay callback will advance).
-    if (pending.current && !celebrated) {
-      const { rePresent } = pending.current
-      pending.current = null
-      advanceRef.current(rePresent)
-    }
-  }, [cfg, settings.enableHaptics, speak, speakAndWait])
+    // Advance now unless a celebration is playing — then the praise audio's completion
+    // (handled in the 'speak' case above) drives the advance instead.
+    if (!celebrated) runPendingAdvance()
+  }, [cfg, settings.enableHaptics, speak, speakAndWait, runPendingAdvance])
 
   const dispatch = useCallback((event: TrialEvent) => {
     const cur = trialRef.current
@@ -185,14 +200,12 @@ export function useTrialSession({ skill, settings, speak, speakAndWait, stop }: 
   }, [cfg, clearTimers, phaseFor, setLive, skill, startTrial])
   advanceRef.current = advance
 
-  // Called by the CelebrationOverlay when its animation completes.
+  // The celebration overlay is purely decorative: when its animation finishes we just hide
+  // it. The advance to the next word is driven by the praise audio finishing (see
+  // processEffects), never by this timer — otherwise a celebration shorter than the praise
+  // clip would cut the audio off and silence the next prompt.
   const onCelebrationDone = useCallback(() => {
     setCelebrate(c => ({ ...c, show: false }))
-    if (pending.current) {
-      const { rePresent } = pending.current
-      pending.current = null
-      advanceRef.current(rePresent)
-    }
   }, [])
 
   // A tap from the UI: correction tap during ERROR, otherwise a normal response.
