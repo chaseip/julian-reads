@@ -1,4 +1,15 @@
-export type Screen = 'home' | 'abc' | 'focus' | 'match' | 'sightwords' | 'settings'
+export type { Skill } from '../engine/types'
+
+export type Screen =
+  | 'home'
+  | 'abc'
+  | 'focus'
+  | 'wordtouch'
+  | 'match'
+  | 'sightwords'
+  | 'phonics'
+  | 'dashboard'
+  | 'settings'
 
 export interface WordEntry {
   word: string
@@ -19,17 +30,8 @@ export interface SightWord {
   category: 'functional' | 'sports' | 'basic'
 }
 
-export interface Progress {
-  letterAttempts: Record<string, number>
-  letterCorrect: Record<string, number>
-  sightAttempts: Record<string, number>
-  sightCorrect: Record<string, number>
-  lastSeen: Record<string, number>
-}
-
 export interface Settings {
   voiceName: string
   voiceRate: number
-  matchChoices: 2 | 3 | 4
   enableHaptics: boolean
 }

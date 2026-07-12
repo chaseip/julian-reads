@@ -59,42 +59,27 @@ ALPHABET = [
     {"letter": "Z", "phonetic": "zzz", "words": ["Zebra", "Zoo", "Zap"]},
 ]
 
-SIGHT_WORD_SPEECHES = [
-    "STOP. This sign means STOP!",
-    "GO. This means you can go!",
-    "EXIT. The exit is the way out!",
-    "OPEN. This place is open!",
-    "CLOSED. This place is closed!",
-    "MEN. This bathroom is for men.",
-    "WOMEN. This bathroom is for women.",
-    "HOT. Be careful, this is hot!",
-    "COLD. This is cold!",
-    "PUSH. Push the door to open it!",
-    "PULL. Pull the door to open it!",
-    "DANGER. This means danger, be careful!",
-    "WALK. It is safe to walk!",
-    "IN. Go in!",
-    "OUT. Go out!",
-    "UP. Go up!",
-    "DOWN. Go down!",
-    "RESTROOM. The restroom is the bathroom!",
-    "BALL. Kick the ball!",
-    "TEAM. A team plays together!",
-    "WIN. Our team wins!",
-    "PLAY. Let's play!",
-    "SCORE. We scored a point!",
-    "GAME. Let's play a game!",
-    "RUN. Run fast!",
-    "JUMP. Jump high!",
-    "YES!",
-    "NO!",
-    "HELP. Ask for help!",
-    "EAT. Time to eat!",
-    "DRINK. Have a drink!",
-    "GOOD. That is good!",
-    "BIG. That is very big!",
-    "LITTLE. That is very little!",
+# Sight-word tokens — keep in sync with src/data/sightWords.ts (word column).
+SIGHT_WORDS = [
+    "STOP", "GO", "EXIT", "OPEN", "CLOSED", "MEN", "WOMEN", "HOT", "COLD",
+    "PUSH", "PULL", "DANGER", "WALK", "IN", "OUT", "UP", "DOWN", "RESTROOM",
+    "BALL", "TEAM", "WIN", "PLAY", "SCORE", "GAME", "RUN", "JUMP",
+    "YES", "NO", "HELP", "EAT", "DRINK", "GOOD", "BIG", "LITTLE",
 ]
+
+# CVC phonics pilot — keep in sync with src/data/cvc.ts.
+CVC_WORDS = [
+    {"word": "CAT", "onset": "k", "vowel": "a", "coda": "t"},
+    {"word": "DOG", "onset": "d", "vowel": "o", "coda": "g"},
+    {"word": "PIG", "onset": "p", "vowel": "i", "coda": "g"},
+    {"word": "SUN", "onset": "s", "vowel": "u", "coda": "n"},
+    {"word": "HAT", "onset": "h", "vowel": "a", "coda": "t"},
+    {"word": "BUS", "onset": "b", "vowel": "u", "coda": "s"},
+    {"word": "BED", "onset": "b", "vowel": "e", "coda": "d"},
+    {"word": "CUP", "onset": "k", "vowel": "u", "coda": "p"},
+]
+
+GENERIC_INDEPENDENT_PRAISE = "You did it all by yourself!"
 
 
 # ---------------------------------------------------------------------------
@@ -107,47 +92,49 @@ def get_all_phrases():
     def add(s):
         phrases.add(s.strip())
 
-    # Home
+    # Home + Settings
     add("Hi Julian! Let's learn today! Pick something to do!")
-
-    # Settings
     add("Settings. You can change the voice and difficulty here.")
-    add("Hi Julian! Great job today! Keep learning! You are doing amazing!")
-    add("Progress has been reset.")
 
-    # Match game fixed
-    add("What letter does this start with?")
-    add("Yes! Great job, Julian!")
+    add(GENERIC_INDEPENDENT_PRAISE)
 
+    # ---- Trial engine prompts (mirror src/data/items.ts) ----
+
+    # Word Touch (receptive reading) + Sight Words (picture -> word).
+    add("Which word is this?")  # sight-word ask (constant)
+    for w in SIGHT_WORDS:
+        # word-touch ask; both skills share model/hint/prompted-praise
+        add(f"Tap {w}.")
+        add(f"This word is {w}.")
+        add(f"{w}. Tap {w}.")
+        add(f"Good job tapping {w}!")
+
+    # First Letter (what letter does this word start with?) — uses each letter's first word.
+    for entry in ALPHABET:
+        L = entry["letter"]
+        word = entry["words"][0]
+        add(f"What letter does {word} start with?")
+        add(f"{word} starts with {L}.")
+        add(f"{word} starts with {L}. Tap {L}.")
+        add(f"Good job! {word} starts with {L}.")
+
+    # Phonics CVC (sound it out).
+    for c in CVC_WORDS:
+        w, o, v, k = c["word"], c["onset"], c["vowel"], c["coda"]
+        add(f"Sound it out. {o}... {v}... {k}. What word?")
+        add(f"{o}... {v}... {k}. {w}.")
+        add(f"{w}. Tap {w}.")
+        add(f"Good job sounding out {w}!")
+
+    # ---- ABC Explorer + Letter Focus (kept-as-is browse tools) ----
     for entry in ALPHABET:
         L = entry["letter"]
         ph = entry["phonetic"]
-        words = entry["words"]
-
-        for word in words:
-            # ABC Explorer / Letter Focus intro
+        for word in entry["words"]:
             add(f'{L}! … {L} says "{ph}". {word}! {word} starts with {L}!')
-            # Word card tap
             add(f'{word}! {word} starts with {L}!')
-            # Match game question
-            add(f'What letter does {word} start with?')
-            # Match re-tap picture
-            add(f'{word}. What letter does {word} start with?')
-            # Match correct
-            add(f'Yes! Great job, Julian! {word} starts with {L}!')
-            # Match hint (constant time delay)
-            add(f'{word} starts with the letter {L}. Can you find the {L}?')
-            # Match wrong / retry
-            add(f"Let's try again. {word} starts with {L}.")
-
-        # Letter Focus auto-speak (first word)
-        w0 = words[0]
-        add(f'This is the letter {L}. {L} says "{ph}". {w0}! {w0} starts with {L}!')
-        # Letter Focus replay button
-        add(f'{L} says "{ph}". {w0}! {w0} starts with {L}!')
-
-    for speech in SIGHT_WORD_SPEECHES:
-        add(speech)
+            add(f'This is the letter {L}. {L} says "{ph}". {word}! {word} starts with {L}!')
+            add(f'{L} says "{ph}". {word}! {word} starts with {L}!')
 
     return sorted(phrases)
 

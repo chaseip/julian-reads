@@ -8,10 +8,12 @@ interface Props {
 }
 
 const TILES: { screen: Screen; emoji: string; label: string; color: string; desc: string }[] = [
-  { screen: 'abc', emoji: '🔤', label: 'ABC', color: 'from-red-500 to-orange-500', desc: 'Learn letters' },
-  { screen: 'match', emoji: '🎮', label: 'Match Game', color: 'from-green-500 to-teal-500', desc: 'Match pictures' },
-  { screen: 'sightwords', emoji: '👁️', label: 'Sight Words', color: 'from-blue-500 to-indigo-500', desc: 'Learn words' },
-  { screen: 'focus', emoji: '⭐', label: 'Letter Focus', color: 'from-purple-500 to-pink-500', desc: 'One letter at a time' },
+  { screen: 'wordtouch', emoji: '👂', label: 'Word Touch', color: 'from-blue-500 to-indigo-500', desc: 'Hear it, tap it' },
+  { screen: 'sightwords', emoji: '👁️', label: 'Sight Words', color: 'from-cyan-500 to-blue-500', desc: 'Read the word' },
+  { screen: 'match', emoji: '🔡', label: 'First Letter', color: 'from-green-500 to-teal-500', desc: 'Starting sounds' },
+  { screen: 'phonics', emoji: '🔊', label: 'Sound It Out', color: 'from-amber-500 to-orange-500', desc: 'Blend the sounds' },
+  { screen: 'abc', emoji: '🔤', label: 'ABC', color: 'from-red-500 to-orange-500', desc: 'Explore letters' },
+  { screen: 'focus', emoji: '⭐', label: 'Letter Focus', color: 'from-purple-500 to-pink-500', desc: 'One at a time' },
 ]
 
 export function HomeScreen({ onNav, speak }: Props) {
