@@ -12,16 +12,17 @@ interface Props {
   settings: Settings
   speak: (text: string) => void
   speakAndWait: (text: string) => Promise<boolean>
+  stop: () => void
   onExit: () => void
 }
 
 // One renderer for every engine-driven activity. Presentation differs only in the
 // stimulus card and whether choices are letter tiles or word cards.
-export function TrialActivity({ skill, title, settings, speak, speakAndWait, onExit }: Props) {
+export function TrialActivity({ skill, title, settings, speak, speakAndWait, stop, onExit }: Props) {
   const {
     trial, celebrate, shimmer, sessionDone, trialIndex, sessionLength,
     tap, replayPrompt, onCelebrationDone,
-  } = useTrialSession({ skill, settings, speak, speakAndWait })
+  } = useTrialSession({ skill, settings, speak, speakAndWait, stop })
 
   const stimulusItem = trial ? itemById(trial.itemId) : undefined
   const lettersAsChoices = skill === 'first-letter'
@@ -70,59 +71,56 @@ export function TrialActivity({ skill, title, settings, speak, speakAndWait, onE
         />
       </div>
 
-      {/* Stimulus card */}
-      <motion.button
-        key={trial.itemId + runtime}
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        onClick={replayPrompt}
-        className="flex flex-col items-center justify-center bg-gray-800 rounded-3xl p-6 gap-3 flex-1 min-h-0 active:brightness-110"
-      >
-        {skill === 'word-touch' ? (
-          <>
-            <motion.span
-              style={{ fontSize: '6rem', lineHeight: 1 }}
-              animate={runtime === 'PRESENT' ? { scale: [1, 1.12, 1] } : {}}
-              transition={{ repeat: Infinity, duration: 1.2 }}
-            >
-              🔊
-            </motion.span>
-            <span className="text-gray-300 text-xl font-bold">Listen, then tap the word</span>
-          </>
-        ) : (
-          <>
-            <span style={{ fontSize: '6.5rem', lineHeight: 1 }}>{stimulusItem?.emoji}</span>
-            {skill === 'first-letter' && (
-              <span className="text-white text-3xl font-black">{stimulusItem?.display}</span>
-            )}
-            {skill === 'phonics-cvc' && (
-              <span className="text-gray-300 text-lg font-bold">Sound it out…</span>
-            )}
-          </>
-        )}
-        <span className="text-gray-500 text-sm">Tap to hear again</span>
-      </motion.button>
-
-      {/* Wait shimmer while input is gated */}
-      <div className="h-6 flex items-center justify-center shrink-0">
-        {!inputEnabled && runtime !== 'CORRECT' && (
-          <motion.span
-            key={shimmer}
-            initial={{ opacity: 0.4 }}
-            animate={{ opacity: [0.4, 1, 0.4] }}
-            transition={{ repeat: Infinity, duration: 1.4 }}
-            className="text-indigo-300 font-bold"
-          >
-            Listen first…
-          </motion.span>
-        )}
-        {runtime === 'ERROR' && (
-          <span className="text-yellow-300 font-bold">Tap the glowing one</span>
+      {/* Stimulus: a big wordless button that (re)plays the prompt when tapped.
+          Word Touch has no picture (pure reading) — just a speaker. */}
+      <div className="flex flex-col items-center gap-2 py-3 shrink-0">
+        <motion.button
+          key={trial.itemId}
+          onClick={replayPrompt}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={
+            runtime === 'PRESENT' || runtime === 'GATE'
+              ? { scale: [1, 1.08, 1], opacity: 1 }
+              : { scale: 1, opacity: 1 }
+          }
+          transition={
+            runtime === 'PRESENT' || runtime === 'GATE'
+              ? { scale: { repeat: Infinity, duration: 1.1 }, opacity: { duration: 0.3 } }
+              : { duration: 0.3 }
+          }
+          className="relative rounded-full bg-indigo-600 active:bg-indigo-500 flex items-center justify-center shadow-2xl"
+          style={{ width: '8.5rem', height: '8.5rem' }}
+        >
+          <span style={{ fontSize: '4.5rem', lineHeight: 1 }}>
+            {skill === 'word-touch' ? '🔊' : stimulusItem?.emoji}
+          </span>
+          {skill !== 'word-touch' && (
+            <span className="absolute -bottom-1 -right-1 bg-gray-900 rounded-full px-1.5 text-xl">🔊</span>
+          )}
+        </motion.button>
+        {skill === 'first-letter' && (
+          <span className="text-white text-3xl font-black">{stimulusItem?.display}</span>
         )}
       </div>
 
-      {/* Choices */}
-      <div className={`grid gap-3 ${gridCols} shrink-0`}>
+      {/* Wordless status cue (a child who can't read shouldn't need to). */}
+      <div className="h-9 flex items-center justify-center shrink-0">
+        {!inputEnabled && runtime !== 'CORRECT' && (
+          <motion.span
+            key={shimmer}
+            initial={{ opacity: 0.5 }}
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ repeat: Infinity, duration: 1.3 }}
+            style={{ fontSize: '2rem' }}
+          >
+            👂
+          </motion.span>
+        )}
+        {runtime === 'ERROR' && <span style={{ fontSize: '2rem' }}>👆</span>}
+      </div>
+
+      {/* Choices — the big, obvious targets that fill the rest of the screen. */}
+      <div className={`grid gap-4 ${gridCols} flex-1 min-h-0 items-center`}>
         {choices.map(choice => {
           const isCorrect = choice.id === correctId
           const highlight = showHighlight && isCorrect
@@ -138,14 +136,13 @@ export function TrialActivity({ skill, title, settings, speak, speakAndWait, onE
               disabled={!inputEnabled && runtime !== 'ERROR'}
               animate={solved ? { scale: [1, 1.15, 1] } : highlight ? { scale: [1, 1.05, 1] } : { scale: 1 }}
               transition={highlight ? { repeat: Infinity, duration: 0.9 } : { duration: 0.2 }}
-              className={`rounded-3xl font-black text-white shadow-lg flex items-center justify-center transition-opacity ${
-                lettersAsChoices ? 'aspect-square' : 'py-6 px-4'
-              } ${dimmed ? 'opacity-40' : 'opacity-100'} ${
-                highlight ? 'ring-4 ring-yellow-400 animate-pulse' : ''
-              }`}
+              className={`rounded-3xl font-black text-white shadow-lg flex items-center justify-center transition-opacity h-full w-full ${
+                dimmed ? 'opacity-40' : 'opacity-100'
+              } ${highlight ? 'ring-8 ring-yellow-400 animate-pulse' : ''}`}
               style={{
                 backgroundColor: solved ? '#16a34a' : color,
-                fontSize: lettersAsChoices ? '3.5rem' : '2.25rem',
+                fontSize: lettersAsChoices ? '4.5rem' : '3rem',
+                letterSpacing: lettersAsChoices ? 0 : '0.05em',
               }}
             >
               {choice.label}
