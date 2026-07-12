@@ -8,7 +8,7 @@ function load(): Settings {
     const raw = localStorage.getItem(KEY)
     if (raw) return JSON.parse(raw)
   } catch {}
-  return { voiceName: 'nova', voiceRate: 0.85, matchChoices: 2, enableHaptics: true }
+  return { voiceName: 'nova', voiceRate: 0.85, enableHaptics: true }
 }
 
 export function useSettings() {

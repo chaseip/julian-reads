@@ -7,9 +7,9 @@ interface Props {
 
 const TABS: { screen: Screen; emoji: string; label: string }[] = [
   { screen: 'home', emoji: '🏠', label: 'Home' },
-  { screen: 'abc', emoji: '🔤', label: 'ABC' },
-  { screen: 'match', emoji: '🎮', label: 'Match' },
+  { screen: 'wordtouch', emoji: '👂', label: 'Touch' },
   { screen: 'sightwords', emoji: '👁️', label: 'Words' },
+  { screen: 'dashboard', emoji: '📊', label: 'Progress' },
   { screen: 'settings', emoji: '⚙️', label: 'Settings' },
 ]
 

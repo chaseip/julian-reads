@@ -47,26 +47,44 @@ export function useSpeech(settings: Settings) {
     }
   }, [])
 
-  const speak = useCallback(async (text: string) => {
-    if (!text) return
+  // Play a phrase and resolve when it finishes (or errors/cancels). Lets the trial
+  // engine gate input on audio completion. Resolves false if interrupted.
+  const speakAndWait = useCallback(async (text: string): Promise<boolean> => {
+    if (!text) return true
     stop()
     cancelRef.current = false
 
     const voice = settings.voiceName || 'nova'
     const url   = await audioUrl(text, voice)
-    if (cancelRef.current) return
+    if (cancelRef.current) return false
 
     const audio = preloaded.get(url) ?? new Audio(url)
     audio.playbackRate = settings.voiceRate
     audio.currentTime  = 0
     audioRef.current   = audio
 
-    try {
-      await audio.play()
-    } catch (err) {
-      console.error('Audio error:', err)
-    }
+    return new Promise<boolean>(resolve => {
+      let settled = false
+      const done = (ok: boolean) => {
+        if (settled) return
+        settled = true
+        audio.onended = null
+        audio.onerror = null
+        resolve(ok && !cancelRef.current)
+      }
+      audio.onended = () => done(true)
+      // Missing pre-generated file (404) should not stall the engine — resolve immediately.
+      audio.onerror = () => done(true)
+      audio.play().catch(err => {
+        console.error('Audio error:', err)
+        done(true)
+      })
+    })
   }, [settings.voiceName, settings.voiceRate, stop])
 
-  return { speak, stop }
+  const speak = useCallback((text: string) => {
+    void speakAndWait(text)
+  }, [speakAndWait])
+
+  return { speak, speakAndWait, stop }
 }
